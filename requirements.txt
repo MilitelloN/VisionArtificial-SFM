@@ -1,0 +1,5 @@
+# OpenCV 5.x falla en findEssentialMat (RANSAC) con datos reales: usar 4.x
+opencv-python>=4.10,<5
+numpy
+open3d
+matplotlib

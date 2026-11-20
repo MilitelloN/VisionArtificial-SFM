@@ -1,0 +1,38 @@
+# ==========================================================
+# Python
+# ==========================================================
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+
+# Entornos virtuales
+.venv/
+venv/
+env/
+
+# ==========================================================
+# Archivos que genera la app (se recrean al usarla)
+# Se conservan las carpetas mediante .gitkeep
+# ==========================================================
+
+# Fotos del tablero y resultado de la calibracion
+calibration/images/*
+calibration/camera_params.npz
+
+# Fotos de la escena y zona de interes (roi.json)
+images/*
+
+# Resultados de la reconstruccion
+output/*
+
+# ==========================================================
+# Editor y sistema operativo
+# ==========================================================
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
+*:Zone.Identifier
