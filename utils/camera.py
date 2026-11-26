@@ -5,7 +5,9 @@ CameraStream abre la camara y lee frames en un hilo aparte, para que la
 interfaz no se trabe mientras espera imagen.
 """
 
+import sys
 import threading
+import time
 
 import cv2
 
@@ -38,7 +40,7 @@ def open_camera(index, width, height):
 class CameraStream:
     """Lee frames continuamente en segundo plano."""
 
-    def __init__(self, index, sizes, retries=30):
+    def __init__(self, index, sizes, retries=10):
         """
         index: indice de la camara.
         sizes: resoluciones (ancho, alto) a probar, en orden de preferencia.
@@ -58,14 +60,27 @@ class CameraStream:
 
         threading.Thread(target=self._run, daemon=True).start()
 
-    def _run(self):
-        cap = None
+    def _open(self, sizes, attempts=5):
+        """
+        Abre la camara probando las resoluciones dadas. Si una captura
+        anterior todavia no la solto, abrirla falla en el acto: se reintenta
+        unos segundos antes de rendirse. Devuelve el cap o None.
+        """
+        for _attempt in range(attempts):
+            for width, height in sizes:
+                cap = open_camera(self.index, width, height)
+                if cap is not None:
+                    self.size = (width, height)
+                    return cap
 
-        for width, height in self.sizes:
-            cap = open_camera(self.index, width, height)
-            if cap is not None:
-                self.size = (width, height)
-                break
+            if not self._running:
+                return None
+            time.sleep(1)
+
+        return None
+
+    def _run(self, max_reopens=5):
+        cap = self._open(self.sizes)
 
         if cap is None:
             sizes = ", ".join(f"{w}x{h}" for w, h in self.sizes)
@@ -74,19 +89,34 @@ class CameraStream:
 
         self.ready = True
         failures = 0
+        reopens = 0
 
         while self._running:
             ok, frame = cap.read()
 
             if ok:
-                failures = 0
+                failures = reopens = 0
                 with self._lock:
                     self._frame = frame
-            else:
-                failures += 1
-                if failures >= self.retries:
+                continue
+
+            failures += 1
+            if failures < self.retries:
+                continue
+
+            # En WSL2 (usbipd) el stream USB se corta seguido: se reabre la
+            # camara a la misma resolucion en vez de abandonar.
+            cap.release()
+            reopens += 1
+            failures = 0
+            print(f"[camara] sin imagen, reabriendo ({reopens}/{max_reopens})",
+                  file=sys.stderr)
+
+            cap = self._open([self.size]) if reopens <= max_reopens else None
+            if cap is None:
+                if self._running:
                     self.error = "La camara dejo de responder."
-                    break
+                return
 
         cap.release()
 

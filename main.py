@@ -301,8 +301,17 @@ class App(tk.Tk):
         self.view = view
         view.pack(fill="both", expand=True)
 
+        # Los botones del menu oculto conservan el foco: sin esto, la tecla
+        # espacio los "presiona" y abre otra captura encima de la actual.
+        view.focus_set()
+
     def close_view(self):
         if self.view is not None:
+            # Una vista de camara que se destruye debe soltar la camara
+            stream = getattr(self.view, "stream", None)
+            if stream is not None:
+                stream.stop()
+
             self.view.destroy()
             self.view = None
 

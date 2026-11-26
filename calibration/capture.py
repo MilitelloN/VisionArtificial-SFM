@@ -21,7 +21,7 @@ from config import (
 MIN_IMAGES = 8
 
 # Resoluciones a probar: la configurada y una alternativa si no entrega imagen
-CAMERA_SIZES = [(CAPTURE_WIDTH, CAPTURE_HEIGHT), (640, 480)]
+CAMERA_SIZES = list(dict.fromkeys([(CAPTURE_WIDTH, CAPTURE_HEIGHT), (640, 480)]))
 
 TITLE = "Captura de calibracion"
 

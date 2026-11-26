@@ -44,6 +44,24 @@ def best_for_drawing(matches):
     return sorted(matches, key=lambda m: m.distance)[:MAX_DRAWN_MATCHES]
 
 
+# Colores BGR de las lineas en matches*.jpg
+INLIER_COLOR = (0, 200, 0)
+OUTLIER_COLOR = (0, 0, 255)
+
+
+def draw_matches(img1, kp1, img2, kp2, matches, color, over=None):
+    """
+    Dibuja las coincidencias con un color fijo. Con over, dibuja encima de
+    una imagen ya generada (las 2 fotos lado a lado) y la devuelve.
+    """
+    flags = cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
+    if over is not None:
+        flags |= cv2.DrawMatchesFlags_DRAW_OVER_OUTIMG
+
+    return cv2.drawMatches(img1, kp1, img2, kp2, matches, over,
+                           matchColor=color, singlePointColor=color, flags=flags)
+
+
 def run(show=True):
     # ==========================================================
     # 1. CARGAR IMAGENES Y CALIBRACION
@@ -182,21 +200,6 @@ def run(show=True):
             "No hay suficientes correspondencias para estimar E"
         )
 
-    matches_img = cv2.drawMatches(
-        img1,
-        kp1,
-        img2,
-        kp2,
-        best_for_drawing(good_matches),
-        None,
-        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
-    )
-
-    cv2.imwrite(
-        f"{OUTPUT_DIR}/matches.jpg",
-        matches_img
-    )
-
 
     # Obtener coordenadas de los keypoints
     pts1 = np.float32([
@@ -264,38 +267,20 @@ def run(show=True):
     print("Inliers:", len(inlier_matches))
     print("Outliers:", len(outlier_matches))
 
-    # Dibujar solamente correspondencias válidas
-    img_inliers = cv2.drawMatches(
-        img1,
-        kp1,
-        img2,
-        kp2,
-        best_for_drawing(inlier_matches),
-        None,
-        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
-    )
+    # Validas en verde, descartadas en rojo; "todas" combina ambas
+    drawn_inliers = best_for_drawing(inlier_matches)
+    drawn_outliers = best_for_drawing(outlier_matches)
 
-    cv2.imwrite(
-        f"{OUTPUT_DIR}/matches_inliers.jpg",
-        img_inliers
-    )
+    img_inliers = draw_matches(img1, kp1, img2, kp2, drawn_inliers, INLIER_COLOR)
+    img_outliers = draw_matches(img1, kp1, img2, kp2, drawn_outliers, OUTLIER_COLOR)
 
-    # Dibujar correspondencias descartadas
-    img_outliers = cv2.drawMatches(
-        img1,
-        kp1,
-        img2,
-        kp2,
-        best_for_drawing(outlier_matches),
-        None,
-        matchColor=(0, 0, 255),
-        flags=cv2.DrawMatchesFlags_NOT_DRAW_SINGLE_POINTS
-    )
+    img_all = draw_matches(img1, kp1, img2, kp2, drawn_outliers, OUTLIER_COLOR)
+    img_all = draw_matches(img1, kp1, img2, kp2, drawn_inliers, INLIER_COLOR,
+                           over=img_all)
 
-    cv2.imwrite(
-        f"{OUTPUT_DIR}/matches_outliers.jpg",
-        img_outliers
-    )
+    cv2.imwrite(f"{OUTPUT_DIR}/matches_inliers.jpg", img_inliers)
+    cv2.imwrite(f"{OUTPUT_DIR}/matches_outliers.jpg", img_outliers)
+    cv2.imwrite(f"{OUTPUT_DIR}/matches.jpg", img_all)
 
 
     # ==========================================================

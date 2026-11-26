@@ -119,14 +119,15 @@ class CameraView(tk.Frame):
             side="bottom", fill="x", pady=(0, 8))
 
         self.capture_button = ttk.Button(buttons, text="Capturar",
-                                         style="Accent.TButton", command=self.capture)
+                                         style="Accent.TButton", command=self.capture,
+                                         takefocus=False)
         self.capture_button.pack(fill="x")
 
         if allow_undo:
-            ttk.Button(buttons, text="Rehacer anterior",
+            ttk.Button(buttons, text="Rehacer anterior", takefocus=False,
                        command=self.undo).pack(fill="x", pady=(4, 0))
 
-        ttk.Button(buttons, text=finish_label,
+        ttk.Button(buttons, text=finish_label, takefocus=False,
                    command=lambda: self.finish("done" if finish_label == "Terminar"
                                                else "cancel")).pack(fill="x", pady=(4, 0))
 
@@ -459,10 +460,11 @@ def to_plot(points):
 MATCH_IMAGES = [
     ("Validas (inliers)", "matches_inliers.jpg"),
     ("Descartadas (outliers)", "matches_outliers.jpg"),
-    ("Todas", "matches.jpg"),
+    ("Todas (verde: validas, rojo: descartadas)", "matches.jpg"),
 ]
 
 MATCHES_WIDTH = 680  # ancho con que se muestra la imagen de coincidencias
+CLOUD_ELEVATION = 20  # angulo vertical fijo de la nube 3D (solo rota horizontal)
 
 
 class CloudView(tk.Frame):
@@ -489,6 +491,12 @@ class CloudView(tk.Frame):
 
         figure = Figure(figsize=(7.2, 3.5), dpi=100, facecolor=CARD)
         ax = figure.add_subplot(projection="3d")
+
+        # Rotacion clasica (elevacion + acimut). Desde matplotlib 3.10 el
+        # modo por defecto es "arcball", que ademas inclina la vista (roll)
+        import matplotlib
+        if "axes3d.mouserotationstyle" in matplotlib.rcParams:
+            matplotlib.rcParams["axes3d.mouserotationstyle"] = "azel"
         ax.set_facecolor(CARD)
 
         # Se recorta la vista a la zona densa (los puntos aislados muy
@@ -529,7 +537,7 @@ class CloudView(tk.Frame):
         ax.set_xlabel("X")
         ax.set_ylabel("Z (profundidad)")
         ax.set_zlabel("Y")
-        ax.view_init(elev=20, azim=-60)
+        ax.view_init(elev=CLOUD_ELEVATION, azim=-60)
         figure.tight_layout()
 
         # Panel lateral
@@ -595,6 +603,15 @@ class CloudView(tk.Frame):
         toolbar.pack(side="bottom", fill="x")
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
         self.canvas.draw()
+
+        # Rotacion solo horizontal: el arrastre cambia el acimut, pero la
+        # elevacion se vuelve a fijar despues de cada movimiento del mouse
+        def keep_elevation(_event):
+            if ax.elev != CLOUD_ELEVATION or ax.roll != 0:
+                ax.view_init(elev=CLOUD_ELEVATION, azim=ax.azim, roll=0)
+                self.canvas.draw_idle()
+
+        self.canvas.mpl_connect("motion_notify_event", keep_elevation)
 
     def show_matches(self):
         """Muestra la imagen de coincidencias elegida (con zoom)."""

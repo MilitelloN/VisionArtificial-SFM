@@ -15,8 +15,8 @@ SQUARE_SIZE = 10.0      # tamaño real del cuadrado en mm
 
 # Camara en vivo (captura de fotos de calibracion)
 CAMERA_INDEX = 0
-CAPTURE_WIDTH = 1280
-CAPTURE_HEIGHT = 720
+CAPTURE_WIDTH = 640    # 1280x720 no entrega imagen por usbipd en WSL2
+CAPTURE_HEIGHT = 480
 
 OUTPUT_DIR = "output"
 
