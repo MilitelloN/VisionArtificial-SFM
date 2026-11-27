@@ -18,13 +18,16 @@ env/
 
 # Fotos del tablero y resultado de la calibracion
 calibration/images/*
+!calibration/images/.gitkeep
 calibration/camera_params.npz
 
 # Fotos de la escena y zona de interes (roi.json)
 images/*
+!images/.gitkeep
 
 # Resultados de la reconstruccion
 output/*
+!output/.gitkeep
 
 # ==========================================================
 # Editor y sistema operativo
@@ -36,73 +39,3 @@ output/*
 Thumbs.db
 desktop.ini
 *:Zone.Identifier
-drive-download-20261120T223650Z-1-001/3D/Estereoscopía.pptx
-drive-download-20261120T223650Z-1-001/3D/Geometría multivista.pptx
-drive-download-20261120T223650Z-1-001/3D/Perspective from n Points.pptx
-drive-download-20261120T223650Z-1-001/3D/Pose 3D de un marcador.pptx
-drive-download-20261120T223650Z-1-001/3D/Problemas 3D.pptx
-drive-download-20261120T223650Z-1-001/3D/Proyecto de perspectiva homográfica.docx
-drive-download-20261120T223650Z-1-001/3D/Proyecto de Realidad aumentada.docx
-drive-download-20261120T223650Z-1-001/3D/Proyecto de Visión robótica.docx
-drive-download-20261120T223650Z-1-001/3D/Pose QR/detectQR.py
-drive-download-20261120T223650Z-1-001/3D/Pose QR/poseQR.py
-drive-download-20261120T223650Z-1-001/3D/Pose QR/QR code empty string.jpeg
-drive-download-20261120T223650Z-1-001/3D/Pose QR/QR code the string COMSYS.png
-drive-download-20261120T223650Z-1-001/Calibración de cámara/Calibración de cámara con Python.docx
-drive-download-20261120T223650Z-1-001/Calibración de cámara/Calibración de cámara.pptx
-drive-download-20261120T223650Z-1-001/Calibración de cámara/Cámaras industriales.pptx
-drive-download-20261120T223650Z-1-001/Calibración de cámara/Geometría proyectiva.pptx
-drive-download-20261120T223650Z-1-001/Calibración de cámara/Gran angular.pptx
-drive-download-20261120T223650Z-1-001/Calibración de cámara/Pose.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, aplicaciones/Clasificadores y redes convolucionales.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, aplicaciones/Detectores con deep learning.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, aplicaciones/MediaPipe.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, aplicaciones/PoseNet.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, aplicaciones/Problemas resueltos con deep learning.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, aplicaciones/Reconocimiento de texto.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, entrenamiento/Datasets.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, entrenamiento/Entrenamiento de DNN.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, entrenamiento/Frameworks de deep learning.pptx
-drive-download-20261120T223650Z-1-001/Deep learning, entrenamiento/Modelos para inferencia.pptx
-drive-download-20261120T223650Z-1-001/Detección/Cell classification by moments and continuous wavelet transform methods, 2007.pdf
-drive-download-20261120T223650Z-1-001/Detección/Componentes conectados.pptx
-drive-download-20261120T223650Z-1-001/Detección/Contornos.pptx
-drive-download-20261120T223650Z-1-001/Detección/Detección de líneas.pptx
-drive-download-20261120T223650Z-1-001/Detección/Imágenes binarias y umbrales.pptx
-drive-download-20261120T223650Z-1-001/Detección/Momentos.pptx
-drive-download-20261120T223650Z-1-001/Detección/Operaciones morfológicas.pptx
-drive-download-20261120T223650Z-1-001/Detección/Proyecto 1_ detección y clasificación de formas.docx
-drive-download-20261120T223650Z-1-001/Feature detection & matching/Detección de keypoints.pptx
-drive-download-20261120T223650Z-1-001/Feature detection & matching/Extracción de descriptores.pptx
-drive-download-20261120T223650Z-1-001/Feature detection & matching/Introducción a la detección, descripción y macheo de features.pptx
-drive-download-20261120T223650Z-1-001/Feature detection & matching/Matching.pptx
-drive-download-20261120T223650Z-1-001/Filtros/Filtros espaciales.pptx
-drive-download-20261120T223650Z-1-001/Filtros/Gradientes.pptx
-drive-download-20261120T223650Z-1-001/Filtros/Pirámide.pptx
-drive-download-20261120T223650Z-1-001/Geométricas/Coordenadas homogéneas.pptx
-drive-download-20261120T223650Z-1-001/Geométricas/Transformaciones geométricas lineales.pptx
-drive-download-20261120T223650Z-1-001/Geométricas/Vista cenital.pptx
-drive-download-20261120T223650Z-1-001/Geométricas/Warp.pptx
-drive-download-20261120T223650Z-1-001/Introducción/Anotaciones.pptx
-drive-download-20261120T223650Z-1-001/Introducción/Histogramas 1D.pptx
-drive-download-20261120T223650Z-1-001/Introducción/Introducción a la visión artificial.pptx
-drive-download-20261120T223650Z-1-001/Introducción/Introducción a OpenCV.pptx
-drive-download-20261120T223650Z-1-001/Introducción/Template matching.pptx
-drive-download-20261120T223650Z-1-001/Machine learning/Classification of Alzheimer Disease based on Normalized Hu Moment Invariants and Multiclassifier, 2021.pdf
-drive-download-20261120T223650Z-1-001/Machine learning/Data fitting.pptx
-drive-download-20261120T223650Z-1-001/Machine learning/Descriptores.pptx
-drive-download-20261120T223650Z-1-001/Machine learning/Machine learning.pptx
-drive-download-20261120T223650Z-1-001/Machine learning/Optimización.pptx
-drive-download-20261120T223650Z-1-001/Machine learning/Proyecto 2_ clasificación con machine learning.docx
-drive-download-20261120T223650Z-1-001/Reconocimiento facial/Proyecto 5_ Reconocimiento de caras.docx
-drive-download-20261120T223650Z-1-001/Reconocimiento facial/Reconocimiento facial.pptx
-drive-download-20261120T223650Z-1-001/Segmentación/levadura.png
-drive-download-20261120T223650Z-1-001/Segmentación/Proyecto 3 bío_ Segmentación instanciada con Watershed.docx
-drive-download-20261120T223650Z-1-001/Segmentación/Proyecto 3_ Segmentación asistida.docx
-drive-download-20261120T223650Z-1-001/Segmentación/Segmentación asistida.pptx
-drive-download-20261120T223650Z-1-001/Segmentación/Segmentación.pptx
-drive-download-20261120T223650Z-1-001/Segmentación/Segmentadores semánticos y redes deconvolucionales.pptx
-drive-download-20261120T223650Z-1-001/Segmentación/U-Net.pptx
-drive-download-20261120T223650Z-1-001/Video/Background subtractor_ Detección de movimiento.pptx
-drive-download-20261120T223650Z-1-001/Video/Optical flow.pptx
-drive-download-20261120T223650Z-1-001/Video/Tracking.pptx

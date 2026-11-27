@@ -43,3 +43,8 @@ REPROJECTION_THRESHOLD = 3.0
 PNP_REPROJECTION_THRESHOLD = 3.0
 PNP_CONFIDENCE = 0.999
 PNP_ITERATIONS = 2000
+
+# Modo en vivo: la camara 3 es el video (PnP en cada cuadro)
+LIVE_SIFT_FEATURES = 2000         # menos keypoints que la reconstruccion, para ir rapido
+LIVE_PNP_ITERATIONS = 300         # iteraciones de RANSAC por cuadro
+LIVE_MIN_INLIERS = 15             # inliers minimos para aceptar la pose del cuadro

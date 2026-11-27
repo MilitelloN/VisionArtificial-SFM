@@ -48,6 +48,7 @@ Gran parte del resultado depende de las fotos. Por eso la captura de la escena t
 | `calibration/calibrate.py` | Calibra la cámara con las fotos de `calibration/images/` y guarda `camera_params.npz`. |
 | `calibration/tablero_ajedrez.png` | Patrón para imprimir. |
 | `sfm/capture.py` | Captura guiada de las 3 fotos de la escena, con validador y sugerencias de posición. |
+| `sfm/live.py` | Modo en vivo: captura del par con el matching dibujado en vivo entre la foto 1 y la cámara, y `LiveTracker`, que ubica la cámara en cada cuadro con PnP contra la nube. |
 | `sfm/roi.py` | Guarda, carga y convierte en máscara la zona de interés elegida sobre la foto 1. |
 | `sfm/reconstruction.py` | Pipeline SfM completo: SIFT, matching, matriz esencial, triangulación, filtrado, PnP y exportación. |
 | `ui/views.py` | Vistas de la ventana: cámara en vivo, selección de zona, nube 3D (matplotlib) e imagen con zoom. |
@@ -58,7 +59,7 @@ Cada carpeta tiene un `.md` con el detalle de sus módulos.
 
 ## 4. Preparación del entorno e instalación
 
-Requiere **Python 3.10+**. Las dependencias están en `requirements.txt` (`opencv-python` 4.x, `numpy`, `open3d`, `matplotlib`).
+Requiere **Python 3.12+** (probado con 3.12.3). Las dependencias están en `requirements.txt`, con las versiones probadas fijadas: `opencv-python` 4.14, `numpy` 2.5, `open3d` 0.20 y `matplotlib` 3.11.
 
 ### Linux
 
@@ -111,12 +112,17 @@ Se abre una ventana con tres tarjetas. La captura, la zona de interés y la nube
 **Objetivo:** generar la nube de puntos 3D de la escena y las poses de las 3 cámaras.
 
 **Botones:**
-- **Capturar y reconstruir:** captura guiada de 3 fotos a la misma resolución de la calibración.
+- **Capturar y reconstruir con imágenes:** captura guiada de 3 fotos a la misma resolución de la calibración.
   - **Foto 1 (referencia):** los objetos con detalle llenan el cuadro.
   - **Foto 2:** correrse unos cm al costado, a la misma distancia y altura.
   - **Foto 3 (PnP):** ubicarse entre la 1 y la 2, apuntando a lo mismo.
 
   El panel lateral muestra el validador (luz, nitidez, detalle, coincidencias con la foto 1 y la mejor cantidad lograda, desplazamiento, distancia e inclinación) y sugerencias como *"Volvé un poco hacia la izquierda"*, *"Acercate"* o *"No inclines la cámara"*. **Capturar** (o **ESPACIO**) solo funciona con "LISTA PARA CAPTURAR". **R** rehace la foto anterior y **ESC** cancela. Al terminar ofrece marcar la zona de interés y luego reconstruye.
+- **Capturar y reconstruir en vivo:** resuelve el opcional de la consigna, PnP en tiempo real. No hay foto 3: el video hace de cámara 3.
+  1. **Foto 1:** se encuadra y se pulsa **ESPACIO**.
+  2. **Foto 2 con matching en vivo:** la vista se divide en dos: la foto 1 fija a la izquierda y la cámara en vivo a la derecha, con una línea entre cada keypoint y su pareja (las 60 mejores). El matching se recalcula en cada cuadro, así que las líneas siguen el movimiento de la cámara. Con el validador en verde, **ESPACIO** saca la foto 2.
+  3. **Reconstrucción** de la nube con las fotos 1 y 2 (`sfm.reconstruction --no-pnp`). Se guardan las fotos 1 y 2 y se borra la 3 anterior, que no corresponde al par nuevo.
+  4. **PnP en vivo:** en cada cuadro, SIFT empareja la imagen con los descriptores de los puntos de la nube (`output/cloud_features.npz`) y `solvePnPRansac` + `solvePnPRefineLM` calculan la pose de la cámara. La nube se dibuja proyectada sobre el video y, al lado, un gráfico 3D que se gira solo en horizontal muestra la nube, las cámaras 1 y 2 y la cámara en vivo (su frustum y su recorrido). En el video, los puntos de color son la nube proyectada con la pose calculada y los círculos verdes, los keypoints que coinciden con esa pose (inliers). El panel indica correspondencias 2D-3D, inliers, error de reproyección, posición y cuadros por segundo. **ESC** termina.
 - **Reconstruir:** usa las fotos ya guardadas en `images/escena1-3.png`. Antes verifica que existan, que tengan la misma resolución entre sí y que coincida con la de la calibración.
 - **Elegir zona / Quitar zona:** se marca con el mouse un rectángulo sobre la foto 1. SIFT solo busca puntos ahí (con un margen del 10%) y el fondo deja de aportar coincidencias falsas.
 - **Borrar fotos:** borra las fotos de la escena, con confirmación.
@@ -155,6 +161,7 @@ Sirve para validar el resultado: las líneas válidas deberían unir los mismos 
 - **Captura en vivo** del tablero y **captura guiada** de la escena con validador y sugerencias de posición.
 - **Zona de interés**, **matching cruzado** y máscara del borde de `undistort` para reducir coincidencias falsas.
 - **Visor propio** de la nube 3D y las cámaras con matplotlib, junto a la imagen de coincidencias con zoom.
+- **Reconstrucción en vivo:** matching en vivo entre la foto 1 y la cámara, y PnP en cada cuadro del video (opcional del TP).
 
 ## 7. Problemas resueltos
 
@@ -184,7 +191,7 @@ Sirve para validar el resultado: las líneas válidas deberían unir los mismos 
 
 ## 9. Glosario
 
-Definiciones basadas en el material de la materia (carpeta `teoria/`), salvo donde se indica.
+Definiciones basadas en el material teórico de la materia, salvo donde se indica.
 
 | Concepto | Definición |
 | --- | --- |
@@ -193,8 +200,8 @@ Definiciones basadas en el material de la materia (carpeta `teoria/`), salvo don
 | **`dist`** | Nombre de la variable que guarda los coeficientes de distorsión (`k1, k2, p1, p2, k3`) en `camera_params.npz`. |
 | **Distancia de Hamming** | Distancia entre dos descriptores binarios: la cantidad de bits en que difieren. Se calcula como `popCount(V1 xor V2)`, por eso es muy rápida. Se usa exclusivamente con descriptores binarios como BRIEF y ORB (máximo 256 para ORB). En esta app la usa el validador en vivo (ORB con `BFMatcher(NORM_HAMMING)`); para los descriptores de SIFT, que son *float*, se usa la distancia euclidiana (L2). |
 | **Error de reproyección** | Distancia en píxeles entre un keypoint detectado y la proyección del punto 3D que le corresponde. Mide la calidad de la triangulación y de la pose; la triangulación y el *bundle adjustment* buscan minimizarlo. |
-| **Error RMS** | Raíz del error cuadrático medio entre las esquinas detectadas del tablero y las que predice el modelo calibrado, en píxeles. Cuanto más bajo, mejor la calibración. *(No figura en `teoria/`.)* |
-| **Frustum** | Pirámide que representa a una cámara en una vista 3D: el vértice es el centro óptico y la base es el plano de imagen. Muestra dónde está la cámara y hacia dónde mira. *(En `teoria/` se describe como "pirámide de base rectangular, con el foco en el vértice principal".)* |
+| **Error RMS** | Raíz del error cuadrático medio entre las esquinas detectadas del tablero y las que predice el modelo calibrado, en píxeles. Cuanto más bajo, mejor la calibración. *(No figura en el material de la materia.)* |
+| **Frustum** | Pirámide que representa a una cámara en una vista 3D: el vértice es el centro óptico y la base es el plano de imagen. Muestra dónde está la cámara y hacia dónde mira. *(En el material de la materia se describe como "pirámide de base rectangular, con el foco en el vértice principal".)* |
 | **Inliers / outliers** | Inliers: coincidencias consistentes con el modelo estimado (por ejemplo, con la matriz esencial). Outliers: coincidencias falsas o redundantes, que se descartan. |
 | **Keypoints** | Puntos característicos de la escena, usualmente esquinas, que se pueden volver a detectar en otras imágenes de la misma escena. No son píxeles sino puntos geométricos (sus coordenadas pueden no ser enteras) y pueden tener orientación, tamaño y puntaje. |
 | **Matching cruzado** (*cross check*) | Chequeo que acepta un par A–B solo si A elige a B y B también elige a A. Evita que varios descriptores se asignen al mismo y reduce outliers. |
@@ -206,7 +213,7 @@ Definiciones basadas en el material de la materia (carpeta `teoria/`), salvo don
 | **Pose** | Posición y orientación de un cuerpo rígido (o de una cámara) en un sistema de coordenadas. Se expresa con una rotación `R` y una traslación `t`, o como una matriz 4×4 en coordenadas homogéneas. |
 | **Pose relativa** | Pose de la cámara 2 respecto de la cámara 1, que se toma como origen del mundo. Necesita al menos 5 correspondencias y tiene 4 soluciones posibles: la correcta es la que deja los puntos delante de ambas cámaras. |
 | **`R` y `t`** | Componentes de la pose relativa que devuelve `recoverPose` a partir de `E`. `R` es la matriz de rotación 3×3 de la cámara 2 respecto de la 1. `t` es el vector de traslación, de **módulo unitario**: solo indica la dirección, porque con imágenes no se puede conocer la escala real. Por eso la nube queda en unidades arbitrarias. |
-| **RANSAC** (*Random Sample Consensus*) | Método robusto de estimación: prueba modelos con subconjuntos aleatorios mínimos de datos y se queda con el que más datos explica (inliers), ignorando los outliers. Se usa en la matriz esencial y en PnP. *(En `teoria/` aparece solo como método robusto de `solvePnPRansac`.)* |
+| **RANSAC** (*Random Sample Consensus*) | Método robusto de estimación: prueba modelos con subconjuntos aleatorios mínimos de datos y se queda con el que más datos explica (inliers), ignorando los outliers. Se usa en la matriz esencial y en PnP. *(En el material de la materia aparece solo como método robusto de `solvePnPRansac`.)* |
 | **Ratio test de Lowe** | Filtro de coincidencias: se compara la distancia del mejor candidato con la del segundo. Si son parecidas, el emparejamiento es ambiguo y se descarta. Se acepta solo si el primero es claramente mejor (en esta app, menor al 75% del segundo). |
 | **SfM** (*Structure from Motion*) | "Estructura a partir del movimiento": técnicas que obtienen la estructura 3D de una escena (la nube de puntos y la pose de cada cámara) a partir de *features* de varias imágenes tomadas desde distintas posiciones. El término viene de la biología: entender una estructura observándola mientras uno se desplaza a su alrededor. |
 | **SIFT** (*Scale Invariant Feature Transform*) | Detector y descriptor de keypoints (Lowe, 2004). Busca *features* en pirámides de imágenes, lo que lo hace invariante a la escala, y orienta cada keypoint para ser invariante a la rotación. Su descriptor es un vector de 128 valores *float*. |
