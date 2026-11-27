@@ -4,6 +4,7 @@ Reconstruccion 3D por Structure from Motion (SfM) de dos vistas.
 Pipeline: carga + undistort -> SIFT -> matching -> matriz esencial ->
 pose relativa -> triangulacion -> filtro por reproyeccion -> color ->
 guardado de la nube -> PnP de una tercera camara -> visualizacion Open3D.
+Con --no-pnp se omite la camara 3 (modo en vivo: la camara 3 es el video).
 
 Ejecutar desde la raiz del proyecto:
     python -m sfm.reconstruction
@@ -62,7 +63,32 @@ def draw_matches(img1, kp1, img2, kp2, matches, color, over=None):
                            matchColor=color, singlePointColor=color, flags=flags)
 
 
-def run(show=True):
+def save_points_csv(points_3d):
+    np.savetxt(
+        f"{OUTPUT_DIR}/points_3d.csv",
+        points_3d,
+        delimiter=",",
+        header="X,Y,Z",
+        comments=""
+    )
+    print("Coordenadas exportadas a points_3d.csv")
+
+
+def save_cameras(K, image_size, R2, C2, R3=None, C3=None):
+    """Poses de las camaras (camara -> mundo) para la interfaz."""
+    poses = {"R2": R2, "C2": C2.ravel()}
+    if R3 is not None:
+        poses.update(R3=R3, C3=C3)
+
+    np.savez(f"{OUTPUT_DIR}/cameras.npz", K=K, image_size=image_size, **poses)
+
+
+def run(show=True, pnp=True):
+    """
+    show: abre la ventana de Open3D al final.
+    pnp: ubica la camara 3 con la foto 3. Sin ella (modo en vivo) se
+    reconstruye solo con las fotos 1 y 2 y la camara 3 es el video.
+    """
     # ==========================================================
     # 1. CARGAR IMAGENES Y CALIBRACION
     # ==========================================================
@@ -548,6 +574,29 @@ def run(show=True):
 
     print("\nNube guardada en output/point_cloud.ply")
 
+    # Descriptor SIFT de cada punto 3D (el de su keypoint en la foto 1):
+    # permite reconocer la nube en otras imagenes, como el video en vivo
+    np.savez(
+        f"{OUTPUT_DIR}/cloud_features.npz",
+        points=points_3d,
+        colors=colors,
+        descriptors=des1[kp1_final]
+    )
+
+    # Pose de la camara 2 (camara -> mundo)
+    R_cam2 = R.T
+    C_cam2 = -R.T @ t
+    image_size = (img1.shape[1], img1.shape[0])
+
+    if not pnp:
+        save_points_csv(points_3d)
+        save_cameras(K, image_size, R_cam2, C_cam2)
+        print("\n===== CAMARAS =====")
+        print("Centro camara 1:", [0, 0, 0])
+        print("Centro camara 2:", C_cam2.ravel())
+        print("Camara 3: se ubica en vivo con PnP")
+        return
+
     ###
 
     # ==========================================================
@@ -659,15 +708,7 @@ def run(show=True):
     # EXPORTAR COORDENADAS 3D
     # ==========================================================
 
-    np.savetxt(
-        f"{OUTPUT_DIR}/points_3d.csv",
-        points_3d,
-        delimiter=",",
-        header="X,Y,Z",
-        comments=""
-    )
-
-    print("Coordenadas exportadas a points_3d.csv")
+    save_points_csv(points_3d)
 
 
     # ==========================================================
@@ -680,20 +721,7 @@ def run(show=True):
         origin=[0, 0, 0]
     )
 
-    # Segunda camara
-    R_cam2 = R.T
-    C_cam2 = -R.T @ t
-
-    # Poses de las camaras (camara -> mundo) para la interfaz
-    np.savez(
-        f"{OUTPUT_DIR}/cameras.npz",
-        K=K,
-        image_size=(img1.shape[1], img1.shape[0]),
-        R2=R_cam2,
-        C2=C_cam2.ravel(),
-        R3=R3_c2w,
-        C3=C3
-    )
+    save_cameras(K, image_size, R_cam2, C_cam2, R3_c2w, C3)
 
     ##
 
@@ -702,9 +730,6 @@ def run(show=True):
         # ==========================================================
         # FRUSTUMS DE LAS DOS CAMARAS
         # ==========================================================
-
-        # image_size = (1280, 720)
-        image_size = (img1.shape[1], img1.shape[0])
 
 
         # Primera camara: identidad y origen
@@ -846,4 +871,4 @@ def run(show=True):
 
 
 if __name__ == "__main__":
-    run(show="--no-gui" not in sys.argv)
+    run(show="--no-gui" not in sys.argv, pnp="--no-pnp" not in sys.argv)

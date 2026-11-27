@@ -66,10 +66,15 @@ class Validator:
         self.matcher = cv2.BFMatcher(cv2.NORM_HAMMING)
         self.reference = None  # (keypoints, descriptores) de la foto 1
         self.best = 0          # mejor cantidad de coincidencias del paso
+        self.factor = 1.0      # escala de la imagen reducida respecto del frame
+        # Ultimas correspondencias con la foto 1, en pixeles del frame:
+        # (puntos en la foto 1, puntos en el frame actual), o None
+        self.last_matches = None
 
     def features(self, frame):
         scale = VALIDATION_WIDTH / frame.shape[1]
         small = cv2.resize(frame, None, fx=scale, fy=scale) if scale < 1 else frame
+        self.factor = scale if scale < 1 else 1.0
         gray = cv2.cvtColor(small, cv2.COLOR_BGR2GRAY)
         kp, des = self.orb.detectAndCompute(gray, None)
         return gray, kp, des
@@ -98,6 +103,7 @@ class Validator:
         """Devuelve (valido, lineas de estado, sugerencias)."""
         gray, kp, des = self.features(frame)
         lines, tips = [], []
+        self.last_matches = None
 
         # --- Calidad de la imagen ---------------------------------------
         brightness = gray.mean()
@@ -148,6 +154,9 @@ class Validator:
 
         p_ref = np.float32([ref_kp[m.queryIdx].pt for m in good])
         p_cur = np.float32([kp[m.trainIdx].pt for m in good])
+        # Las de menor distancia primero (son las que se dibujan)
+        order = np.argsort([m.distance for m in good])
+        self.last_matches = (p_ref[order] / self.factor, p_cur[order] / self.factor)
 
         motion = p_cur - p_ref
         shift = np.median(np.linalg.norm(motion, axis=1)) / VALIDATION_WIDTH

@@ -39,8 +39,13 @@ from config import (
 from sfm.capture import GUIDE as SCENE_GUIDE
 from sfm.capture import KEYS as SCENE_KEYS
 from sfm.capture import SceneCapture
+from sfm.live import GUIDE as LIVE_GUIDE
+from sfm.live import KEYS as LIVE_KEYS
+from sfm.live import LivePairCapture, LiveTracker
 from sfm.roi import clear_roi, load_roi, reference_image, save_roi
-from ui.views import ACCENT, BG, CARD, MUTED, TEXT, CameraView, CloudView, RoiView
+from ui.views import (
+    ACCENT, BG, CARD, MUTED, TEXT, CameraView, CloudView, LiveView, RoiView,
+)
 from utils.camera import CameraStream
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
@@ -213,7 +218,10 @@ class App(tk.Tk):
               ("Borrar fotos", self.on_delete_calibration_images, "Danger.TButton")]),
             ("scene", "2. Reconstruir escena",
              "SIFT, matriz esencial, triangulacion y PnP de una 3ra camara.",
-             [("Capturar y reconstruir", self.on_capture_reconstruct, "Accent.TButton"),
+             [("Capturar y reconstruir con imágenes", self.on_capture_reconstruct,
+               "Accent.TButton"),
+              ("Capturar y reconstruir en vivo", self.on_capture_reconstruct_live,
+               "Accent.TButton"),
               ("Reconstruir", self.on_reconstruct, "TButton"),
               [("Elegir zona", self.on_select_roi, "TButton"),
                ("Quitar zona", self.on_clear_roi, "TButton")],
@@ -561,6 +569,67 @@ class App(tk.Tk):
                            SCENE_GUIDE, SCENE_KEYS, finished,
                            finish_label="Cancelar", allow_undo=True)
 
+    def on_capture_reconstruct_live(self):
+        """
+        Foto 1, foto 2 con el matching en vivo a la vista, reconstruccion
+        con ese par y despues PnP sobre el video.
+        """
+        if not self.require_calibration():
+            return
+
+        if any(os.path.exists(path(image)) for image in SCENE_IMAGES) and \
+                not messagebox.askyesno(
+                    "Reemplazar fotos",
+                    "Ya hay fotos de la escena en images/.\n"
+                    "El modo en vivo guarda las fotos 1 y 2 y borra la 3.\n"
+                    "¿Continuar?"):
+            return
+
+        session = LivePairCapture()
+
+        def finished(result):
+            if result != "done" or not session.complete:
+                self.write_log("Captura en vivo cancelada.\n", "info")
+                return
+
+            for saved in session.save():
+                self.write_log(f"Foto guardada: {saved}\n")
+
+            # La zona anterior no corresponde a las fotos nuevas
+            clear_roi()
+
+            self.run_module("sfm.reconstruction", "Reconstruccion 3D (fotos 1 y 2)",
+                            args=["--no-gui", "--no-pnp"],
+                            on_done=lambda code: code == 0 and self.open_live_pnp())
+
+        self.start_capture([calibration_size()], session, "Captura en vivo",
+                           LIVE_GUIDE, LIVE_KEYS, finished,
+                           finish_label="Cancelar", allow_undo=True)
+
+    def open_live_pnp(self):
+        """Ubica la camara en cada cuadro del video contra la nube recien armada."""
+        try:
+            tracker = LiveTracker()
+        except (OSError, KeyError) as error:
+            messagebox.showerror("PnP en vivo", f"No se pudo cargar la nube:\n{error}")
+            return
+
+        self.stream = CameraStream(CAMERA_INDEX, [calibration_size()])
+        self.status.set("PnP en vivo: camara activa")
+        self.write_log("PnP en vivo: mueve la camara alrededor de la escena.\n", "info")
+
+        def finish(result):
+            self.stream = None
+            if result == "error":
+                messagebox.showerror(
+                    "Camara no disponible",
+                    "No se pudo obtener imagen de la camara.\n"
+                    "Revisa que este conectada o cambia CAMERA_INDEX en config.py.",
+                )
+            self.show_home()
+
+        self.show_view(LiveView(self.content, self, self.stream, tracker, finish))
+
     def on_reconstruct(self):
         if not self.require_calibration():
             return
@@ -571,7 +640,8 @@ class App(tk.Tk):
             messagebox.showwarning(
                 "Fotos de la escena",
                 "\n".join(problems) +
-                "\n\nUsa 'Capturar y reconstruir' o revisa IMAGE1-3 en config.py.",
+                "\n\nUsa 'Capturar y reconstruir con imágenes' o revisa IMAGE1-3 "
+                "en config.py.",
             )
             return
 
